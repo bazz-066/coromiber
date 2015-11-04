@@ -139,48 +139,6 @@ def parse_packet(packet, messages, n):
 			packet_tuple = h.hexdigest()
 			tcp_reconstruction(messages, data, packet_tuple, n)
 
-
-#def parse_packet(packet, messages, n):
-#	eth_length = 14
-#
-#	eth_header = packet[:eth_length]
-#	eth = unpack('!6s6sH', eth_header)
-#	eth_protocol = socket.ntohs(eth[2])
-
-	#print eth_protocol
-
-#	if eth_protocol == 8: #ETHERNET PACKET
-#		ip_header = packet[eth_length:20+eth_length]
-#
-#		iph = unpack('!BBHHHBBH4s4s', ip_header)
-#		version = iph[0] >> 4
-#		ihl = iph[0] & 0xF
-#
-#		ip_protocol = iph[6]
-#		s_addr = socket.inet_ntoa(iph[8])
-#		d_addr = socket.inet_ntoa(iph[9])
-#		#print ip_protocol
-#		if int(ip_protocol) == 6:
-#			t = (ihl * 4) + eth_length
-#			tcp_header = packet[t:t+20]
-#
-#			tcph = unpack('!HHLLBBHHH', tcp_header)
-#
-#			sport = tcph[0]
-#			dport = tcph[1]
-#			tcph_length = tcph[4] >> 4
-#
-#			h_size = eth_length + (ihl * 4) + (tcph_length * 4)
-#			data = packet[h_size:]
-#
-#			if (int(dport) == 80):
-#				#print "new packet ", len(data)	
-#				print "Packet from ", s_addr, sport, dport
-#				h = hashlib.sha256()
-#				h.update(str(s_addr) + str(d_addr) + str(sport) + str(dport))
-#				packet_tuple = h.hexdigest()
-#				tcp_reconstruction(messages, data, packet_tuple, n)
-
 def tcp_reconstruction(messages, data, packet_tuple, n):
 	client = messages.get(packet_tuple)
 
