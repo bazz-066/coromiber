@@ -26,9 +26,9 @@ class Rules(object):
 		up_sum = 0
 		down_sum_a = 0
 		down_sum_b = 0
-
+		
 		for key, a in incoming_gram.iteritems():
-			b = 0 if gram_rule.rule.get(key) is None else gram_rule.rule.get(key)
+			b = 0 if gram_rule.rule.get(binascii.unhexlify(key)) is None else gram_rule.rule.get(binascii.unhexlify(key))
 			up_sum += a*b
 			down_sum_a += math.pow(a,2)
 
@@ -47,6 +47,6 @@ class Rules(object):
 		
 
 #rules = Rules()
-#inc = {'aa':1, 'bb':2, 'cc':3}
+#inc = {'a':1, 'b':2, 'c':3}
 #sims = rules.similarities(inc)
 #print sims

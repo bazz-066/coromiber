@@ -5,6 +5,7 @@ import pcapy
 import sys
 import hashlib
 from impacket import ImpactDecoder, ImpactPacket
+from threading import Lock
 
 from Rules import Rules
 from PacketMergerThread import PacketMergerThread
@@ -19,9 +20,14 @@ mode="capture"
 infile="input.pcap"
 outfile = "coromiber.rules"
 n = 2
+mutex = Lock()
+
+count = 0
 
 def main(argv):
 	global rules
+	global count
+
 	try:
 		conffile = argv[1].split("=")[1]
 		if loadconfig(conffile) == -1:
@@ -39,6 +45,7 @@ def main(argv):
 			print "Unknown mode"
 			quit()
 		messages = {}
+		flog = open("log.txt", "w")
 	except IndexError as e:
 		print "Usage : python coromiber.py conf=[coromiber.conf]"
 		print e
@@ -48,13 +55,14 @@ def main(argv):
 			(header, packet) = cap.next()
 			if not header:
 				break
-			parse_packet(packet, messages, n)
+			parse_packet(packet, messages, n, flog)
 		except (TypeError, AttributeError, NameError) as e:
 			print e
 		except pcapy.PcapError:
 			break
 		except KeyboardInterrupt:
 			print "CoroMiber is Shuttting Down ..."
+			flog.close()
 			quit()
 		except socket.timeout:
 			#continue
@@ -115,7 +123,7 @@ def loadconfig(conffile):
 	print "mode : " + mode
 	return 0
 			
-def parse_packet(packet, messages, n):
+def parse_packet(packet, messages, n, flog):
 	decoder = ImpactDecoder.EthDecoder()
 	ether = decoder.decode(packet)
 
@@ -129,25 +137,30 @@ def parse_packet(packet, messages, n):
 		dport = tcphdr.get_th_dport()
 		data = tcphdr.get_data_as_string()
 	       
-		if (sport == 80 or dport == 80) and len(data) > 0:
-			print s_addr, d_addr, sport, dport
-			print "len : " + str(len(data))
-			print "data : " + data
-			print "Packet from ", s_addr, sport, dport
+		if (dport == 80) and len(data) > 0:
+			#print s_addr, d_addr, sport, dport
+			#print "len : " + str(len(data))
+			#print "data : " + data
+			#print "Packet from ", s_addr, sport, dport
 			h = hashlib.sha256()
 			h.update(str(s_addr) + str(d_addr) + str(sport) + str(dport))
 			packet_tuple = h.hexdigest()
-			tcp_reconstruction(messages, data, packet_tuple, n)
+			tcp_reconstruction(messages, data, packet_tuple, n, flog)
 
-def tcp_reconstruction(messages, data, packet_tuple, n):
+def tcp_reconstruction(messages, data, packet_tuple, n, flog):
+	global count
+	global rules	
+	
 	client = messages.get(packet_tuple)
 
 	if not client:
-		tmp = PacketMergerThread(packet_tuple, delay, n, rules, threshold)
+		tmp = PacketMergerThread(packet_tuple, delay, n, rules, threshold, flog, mutex)
 		tmp.add_packet(data)
 		if mode == "capture":
 			tmp.start()
 		messages[packet_tuple] = tmp
+		count += 1
+		print count
 	else:
 		client.add_packet(data)
 

@@ -1,11 +1,12 @@
 import threading
 import time
+from threading import Lock
 
 from GramFrequency import GramFrequency
 from Rules import Rules
 
 class PacketMergerThread(threading.Thread):
-	def __init__(self, packet_tuple, delay, n, rules, threshold):
+	def __init__(self, packet_tuple, delay, n, rules, threshold, flog, mutex):
 		threading.Thread.__init__(self)
 		self.done = False
 		self.packet_tuple = packet_tuple
@@ -14,6 +15,8 @@ class PacketMergerThread(threading.Thread):
 		self.n = n
 		self.rules = rules
 		self.threshold = threshold
+		self.flog = flog
+		self.mutex = mutex
 
 	def run(self):
 		time.sleep(self.delay)
@@ -21,7 +24,7 @@ class PacketMergerThread(threading.Thread):
 		
 		if len(self.message) > 0:
 			ngram = GramFrequency(self.packet_tuple, self.message, self.n)
-			print self.packet_tuple, self.message.encode('string_escape')#, ngram.list_frequency
+			#print self.packet_tuple, self.message.encode('string_escape')#, ngram.list_frequency
 			sims = self.rules.similarities(ngram.list_frequency)
 			print sims
 			
@@ -32,10 +35,13 @@ class PacketMergerThread(threading.Thread):
 					continue
 				else:
 					alert = False
-					print self.packet_tuple, ": Benign"
+					#print self.packet_tuple , ": Benign"
 
 			if alert == True:
-				print self.packet_tuple, ": Intrusion !!!"
+				self.mutex.acquire(1)
+				print sims
+				self.flog.write(str(self.packet_tuple) + ": Intrusion !!!\n")
+				self.mutex.release()
 
 	def add_packet(self, data):
 		if self.done:
